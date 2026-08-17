@@ -1,0 +1,643 @@
+:root {
+  --radar-blue: #0b0f19;
+  --radar-blue-light: #162447;
+  --radar-blue-grid: rgba(229, 9, 20, 0.4);
+  --neon-red: #e50914;
+  --neon-orange: #f4b41a;
+  --crt-green: #ffffff;
+  --device-border: #1f4068;
+  --device-bg: #0b0f19;
+  --panel-bg: rgba(22, 36, 71, 0.85);
+  --btn-bg-light: #1f4068;
+  --btn-bg-orange: #f4b41a;
+  --btn-bg-red: #e50914;
+  --btn-text: #ffffff;
+  --font-family: 'Press Start 2P', cursive;
+  --btn-radius: 8px;
+}
+
+[data-theme="amo"] {
+  --radar-blue: #ffffff;
+  --radar-blue-light: #f0f0f0;
+  --radar-blue-grid: rgba(0, 0, 0, 0.05);
+  --neon-red: #ff3b30;
+  --neon-orange: #ff9500;
+  --crt-green: #34c759;
+  --device-border: #cccccc;
+  --device-bg: #ffffff;
+  --panel-bg: rgba(255, 255, 255, 0.95);
+  --btn-bg-light: #f2f2f7;
+  --btn-bg-orange: #ff9500;
+  --btn-bg-red: #ff3b30;
+  --btn-text: #000000;
+  --font-family: 'Inter', 'Roboto', sans-serif;
+  --btn-radius: 20px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family);
+}
+
+body {
+  background-color: #050505; /* Black space outside the device */
+  color: var(--crt-green);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* CRT Scanline Overlay */
+.crt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  pointer-events: none; /* Crucial: allows clicks to pass through */
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%,
+    rgba(0, 0, 0, 0.25) 50%
+  );
+  background-size: 100% 4px;
+  animation: flicker 0.15s infinite, scroll-scanlines 10s linear infinite;
+  opacity: 0.8;
+}
+
+@keyframes flicker {
+  0% { opacity: 0.8; }
+  50% { opacity: 0.85; }
+  100% { opacity: 0.8; }
+}
+
+@keyframes scroll-scanlines {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100vh; }
+}
+
+/* Ensures Leaflet map does not collapse */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* Device Frame styling */
+.device-frame {
+  position: relative;
+  width: 95vw;
+  max-width: 1200px;
+  height: 95vh;
+  max-height: 900px;
+  background-color: var(--device-bg);
+  border: 12px solid var(--device-border);
+  border-radius: 30px;
+  outline: 4px solid #000;
+  box-shadow: 0 0 20px rgba(0,0,0,0.4);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.map-wrapper {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 1;
+}
+
+/* Radar & Grid Overlays */
+.map-grid-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 400; /* above leaflet tiles */
+  background-size: 50px 50px;
+  background-image: 
+    linear-gradient(to right, var(--radar-blue-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--radar-blue-grid) 1px, transparent 1px);
+  /* Optional: we could use a radial-gradient or repeating conic gradient for a web look, but a grid is okay for now */
+}
+
+.radar-sweep {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(from 0deg, transparent 70%, rgba(64, 120, 180, 0.3) 100%);
+  transform-origin: 0 0;
+  animation: radar-spin 4s linear infinite;
+  pointer-events: none;
+  z-index: 401;
+  border-radius: 50%;
+}
+
+@keyframes radar-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* HUD Panels */
+.hud-panel {
+  position: absolute;
+  z-index: 1000;
+  background-color: var(--panel-bg);
+  color: var(--btn-text);
+  border: 4px solid var(--neon-red);
+  border-radius: 12px;
+  text-transform: uppercase;
+  font-size: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.top-banner {
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  text-align: center;
+  background-color: var(--btn-bg-orange);
+}
+
+.left-toolbar {
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.left-toolbar .hud-btn {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #ffcccc;
+  border: 3px solid #000;
+  border-radius: 4px; /* Slight pill shape on edges depending on image, mostly square */
+}
+
+.bottom-controls {
+  bottom: 20px;
+  right: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 12px;
+}
+
+.top-right-stats {
+  top: 20px;
+  right: 20px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background-color: var(--panel-bg);
+  border: 4px solid var(--neon-red);
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+}
+
+/* 8-bit UI styling */
+.pixel-ui {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  z-index: 1000;
+  background-color: var(--panel-bg);
+  color: var(--btn-text);
+  padding: 16px;
+  border: 4px solid var(--device-border);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  border-radius: 16px;
+  text-transform: uppercase;
+  font-size: 14px;
+  line-height: 1.8;
+  max-width: calc(100vw - 48px);
+}
+
+/* Network Warning Banner */
+.network-warning {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  background-color: var(--neon-red);
+  color: #fff;
+  text-align: center;
+  padding: 8px;
+  font-size: 14px;
+  z-index: 10000;
+  border-bottom: 4px solid #000;
+  text-transform: uppercase;
+  font-family: 'Press Start 2P', cursive;
+  box-shadow: 0px 4px 0px 0px rgba(0,0,0,0.5);
+}
+
+.blink-text {
+  animation: blink 1s infinite;
+}
+
+/* Landing Screen Styles */
+.landing-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--radar-blue);
+  padding: 24px;
+}
+
+.landing-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  padding: 40px;
+  border: 6px solid var(--neon-red);
+  box-shadow: 16px 16px 0px 0px rgba(0, 0, 0, 0.75);
+  background-color: #000;
+  text-align: center;
+  width: 100%;
+  max-width: 500px;
+}
+
+.landing-title {
+  color: var(--crt-green);
+  font-size: clamp(24px, 5vw, 32px);
+  text-shadow: 4px 4px 0px var(--neon-red);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.error-message {
+  color: var(--neon-red);
+  background: #000;
+  padding: 12px;
+  border: 2px solid var(--neon-red);
+  font-size: 12px;
+  width: 100%;
+  animation: blink 1s infinite;
+}
+
+.action-section {
+  width: 100%;
+}
+
+.divider {
+  color: #fff;
+  font-size: 14px;
+}
+
+.join-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.pixel-input {
+  background-color: var(--device-bg);
+  color: var(--btn-text);
+  border: 4px solid var(--device-border);
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 16px;
+  text-align: center;
+  text-transform: uppercase;
+  outline: none;
+  font-family: var(--font-family);
+}
+
+.pixel-input:focus {
+  border-color: #fff;
+}
+
+/* Chunky Arcade Buttons */
+.pixel-btn, .hud-btn {
+  background-color: var(--btn-bg-light);
+  color: var(--btn-text);
+  border: 3px solid var(--device-border);
+  padding: 10px 16px;
+  font-size: 10px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  text-transform: uppercase;
+  transition: transform 0.1s, box-shadow 0.1s;
+  font-family: var(--font-family);
+  border-radius: var(--btn-radius);
+}
+
+.pixel-btn.primary {
+  background-color: var(--btn-bg-orange);
+}
+
+.pixel-btn:active:not(:disabled), .hud-btn:active:not(:disabled) {
+  box-shadow: 0px 0px 0px 0px #000;
+  transform: translate(2px, 2px);
+}
+
+.pixel-btn:disabled, .hud-btn:disabled {
+  background-color: #555;
+  color: #222;
+  border-color: #333;
+  box-shadow: 2px 2px 0px 0px #111;
+  cursor: not-allowed;
+}
+
+/* Decorative Icons */
+.spidey-icon-bottom-left {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 1001;
+  width: 80px;
+  height: 80px;
+  background-color: #80c3e6;
+  border: 4px solid #000;
+  border-radius: 8px; /* Slightly pill-shaped or octagonal if we could */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  box-shadow: inset -2px -2px 0px rgba(0,0,0,0.2), inset 2px 2px 0px rgba(255,255,255,0.4);
+}
+
+.spidey-icon-bottom-left .spidey-marker-base {
+  transform: scale(2); /* Make it bigger */
+}
+
+.create-btn {
+  width: 100%;
+}
+
+.join-btn {
+  width: 100%;
+}
+
+/* Geo State Screens */
+.geo-error-screen, .geo-loading-screen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--radar-blue);
+  text-align: center;
+  padding: 24px;
+}
+
+.geo-error-text {
+  color: var(--neon-red);
+  font-size: clamp(16px, 4vw, 24px);
+  text-shadow: 2px 2px 0px #000;
+  border: 4px solid var(--neon-red);
+  padding: 24px;
+  background-color: rgba(0, 0, 0, 0.8);
+  line-height: 1.5;
+  animation: blink 1s infinite;
+}
+
+.geo-loading-text {
+  color: var(--crt-green);
+  font-size: clamp(16px, 4vw, 24px);
+  animation: blink 1s infinite;
+  text-shadow: 2px 2px 0px #000;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* 
+ * 8-BIT SPIDER-MAN MAP MARKERS (PURE CSS PIXEL ART) 
+ * 10x10 Grid mapped to a 3px scale factor = 30x30px total size
+ */
+.retro-marker-wrapper {
+  background: transparent !important;
+  border: none !important;
+}
+
+.spidey-marker-local {
+  --spidey-main: #f4b41a; /* Orange/Yellow variant for local user based on image */
+}
+
+.spidey-marker-remote {
+  --spidey-main: #e50914; /* Red variant for remote users */
+}
+
+.spidey-marker-remote-green {
+  --spidey-main: #1f4068; /* Blue variant */
+}
+
+.spidey-marker-base {
+  width: 3px;
+  height: 3px;
+  background: transparent;
+  box-shadow: 
+    /* Row 0 */
+    6px 0px #000, 9px 0px #000, 12px 0px #000, 15px 0px #000, 18px 0px #000, 21px 0px #000,
+    /* Row 1 */
+    3px 3px #000, 6px 3px var(--spidey-main), 9px 3px var(--spidey-main), 12px 3px var(--spidey-main), 15px 3px var(--spidey-main), 18px 3px var(--spidey-main), 21px 3px var(--spidey-main), 24px 3px #000,
+    /* Row 2 */
+    0px 6px #000, 3px 6px var(--spidey-main), 6px 6px var(--spidey-main), 9px 6px var(--spidey-main), 12px 6px var(--spidey-main), 15px 6px var(--spidey-main), 18px 6px var(--spidey-main), 21px 6px var(--spidey-main), 24px 6px var(--spidey-main), 27px 6px #000,
+    /* Row 3 */
+    0px 9px #000, 3px 9px var(--spidey-main), 6px 9px #000, 9px 9px #000, 12px 9px var(--spidey-main), 15px 9px var(--spidey-main), 18px 9px #000, 21px 9px #000, 24px 9px var(--spidey-main), 27px 9px #000,
+    /* Row 4 */
+    0px 12px #000, 3px 12px var(--spidey-main), 6px 12px #000, 9px 12px #fff, 12px 12px #000, 15px 12px #000, 18px 12px #fff, 21px 12px #000, 24px 12px var(--spidey-main), 27px 12px #000,
+    /* Row 5 */
+    0px 15px #000, 3px 15px var(--spidey-main), 6px 15px #000, 9px 15px #fff, 12px 15px #fff, 15px 15px #fff, 18px 15px #fff, 21px 15px #000, 24px 15px var(--spidey-main), 27px 15px #000,
+    /* Row 6 */
+    0px 18px #000, 3px 18px var(--spidey-main), 6px 18px var(--spidey-main), 9px 18px #000, 12px 18px #fff, 15px 18px #fff, 18px 18px #000, 21px 18px var(--spidey-main), 24px 18px var(--spidey-main), 27px 18px #000,
+    /* Row 7 */
+    0px 21px #000, 3px 21px var(--spidey-main), 6px 21px var(--spidey-main), 9px 21px var(--spidey-main), 12px 21px #000, 15px 21px #000, 18px 21px var(--spidey-main), 21px 21px var(--spidey-main), 24px 21px var(--spidey-main), 27px 21px #000,
+    /* Row 8 */
+    3px 24px #000, 6px 24px var(--spidey-main), 9px 24px var(--spidey-main), 12px 24px var(--spidey-main), 15px 24px var(--spidey-main), 18px 24px var(--spidey-main), 21px 24px var(--spidey-main), 24px 24px #000,
+    /* Row 9 */
+    6px 27px #000, 9px 27px #000, 12px 27px #000, 15px 27px #000, 18px 27px #000, 21px 27px #000;
+}
+
+.ghost-marker {
+  filter: blur(4px) opacity(0.7);
+  box-shadow: 
+    -3px 0 0 0 rgba(255, 255, 255, 0.5),
+    3px 0 0 0 rgba(255, 255, 255, 0.5),
+    0 -3px 0 0 rgba(255, 255, 255, 0.5),
+    0 3px 0 0 rgba(255, 255, 255, 0.5),
+    -3px -3px 0 0 rgba(255, 255, 255, 0.5),
+    3px -3px 0 0 rgba(255, 255, 255, 0.5),
+    -3px 3px 0 0 rgba(255, 255, 255, 0.5),
+    3px 3px 0 0 rgba(255, 255, 255, 0.5);
+}
+
+.frozen-marker {
+  filter: grayscale(100%) opacity(0.8);
+  box-shadow: 
+    -3px 0 0 0 #a5f2f3,
+    3px 0 0 0 #a5f2f3,
+    0 -3px 0 0 #a5f2f3,
+    0 3px 0 0 #a5f2f3,
+    -3px -3px 0 0 #a5f2f3,
+    3px -3px 0 0 #a5f2f3,
+    -3px 3px 0 0 #a5f2f3,
+    3px 3px 0 0 #a5f2f3;
+}
+
+
+.interaction-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5000;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.effect-text {
+  font-family: "Press Start 2P", monospace;
+  font-size: 24px;
+  color: white;
+  text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+  animation: scale-up 0.3s ease-out forwards;
+}
+
+.effect-ping {
+  box-shadow: inset 0 0 50px 20px var(--neon-red);
+  animation: pulse-border 0.5s ease-out 3;
+}
+
+.effect-sos {
+  box-shadow: inset 0 0 100px 40px red;
+  animation: pulse-border 0.2s ease-out infinite;
+  background-color: rgba(255, 0, 0, 0.2);
+}
+
+.effect-bump {
+  box-shadow: inset 0 0 50px 20px var(--crt-green);
+  animation: pulse-border-green 1s ease-out 1;
+}
+
+@keyframes pulse-border {
+  0% { box-shadow: inset 0 0 0px 0px var(--neon-red); }
+  50% { box-shadow: inset 0 0 100px 20px var(--neon-red); }
+  100% { box-shadow: inset 0 0 0px 0px var(--neon-red); }
+}
+
+@keyframes pulse-border-green {
+  0% { box-shadow: inset 0 0 0px 0px var(--crt-green); }
+  50% { box-shadow: inset 0 0 100px 20px var(--crt-green); }
+  100% { box-shadow: inset 0 0 0px 0px var(--crt-green); }
+}
+
+@keyframes scale-up {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1.5); opacity: 1; }
+}
+
+
+.web-polyline {
+  animation: web-flow 20s linear infinite;
+}
+
+@keyframes web-flow {
+  to {
+    stroke-dashoffset: -1000;
+  }
+}
+
+
+/* Spider-Verse Aesthetic Enhancements */
+
+/* Chromatic Aberration Text Effect */
+.glitch-text {
+  position: relative;
+  display: inline-block;
+  color: #fff;
+  text-shadow: 2px 0 var(--neon-red), -2px 0 #0ff;
+  animation: chromatic-glitch 3s infinite;
+}
+
+@keyframes chromatic-glitch {
+  0%, 100% { text-shadow: 2px 0 var(--neon-red), -2px 0 #0ff; }
+  50% { text-shadow: -2px 0 var(--neon-red), 2px 0 #0ff; }
+}
+
+/* Halftone Pattern Background */
+.halftone-bg {
+  background-image: radial-gradient(#222 20%, transparent 20%),
+                    radial-gradient(#222 20%, transparent 20%);
+  background-color: #0b0f19;
+  background-position: 0 0, 5px 5px;
+  background-size: 10px 10px;
+}
+
+/* Spider-Verse Pink/Cyan accent colors */
+:root {
+  --spider-cyan: #0ff;
+  --spider-pink: #f0f;
+}
+
+.hud-panel {
+  border: 4px solid var(--spider-cyan) !important;
+  box-shadow: inset -2px -2px 0px rgba(0,0,0,0.5), inset 2px 2px 0px rgba(255,255,255,0.2), 0 0 10px var(--spider-cyan) !important;
+}
+
+.hud-btn:hover {
+  background-color: var(--spider-pink) !important;
+  border-color: #fff !important;
+  color: #000 !important;
+  box-shadow: 0 0 10px var(--spider-pink);
+}
+
+.hud-overlay::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(255, 255, 255, 0.03) 10px,
+    rgba(255, 255, 255, 0.03) 12px
+  );
+  pointer-events: none;
+  z-index: 999;
+}
+

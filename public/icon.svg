@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512" shape-rendering="crispEdges">
+  <!-- Retro Background -->
+  <rect width="100" height="100" fill="#001219"/>
+  <!-- Blocky Spidey Face Base -->
+  <rect x="25" y="25" width="50" height="50" fill="#ff003c" stroke="#000" stroke-width="4"/>
+  <!-- Left Eye -->
+  <polygon points="30,40 45,55 30,60" fill="#fff" stroke="#000" stroke-width="3"/>
+  <!-- Right Eye -->
+  <polygon points="70,40 55,55 70,60" fill="#fff" stroke="#000" stroke-width="3"/>
+</svg>
